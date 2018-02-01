@@ -113,9 +113,23 @@ namespace assembly_writer {
 	public:
 		std::vector<BytecodeOp> opcodes;
 
+		BasicBlockWriter() = default;
+		BasicBlockWriter(const BasicBlockWriter& other) = delete;
+		BasicBlockWriter(BasicBlockWriter&& other) = default;
+
 		BasicBlockWriter& Write(const BytecodeOp& op) {
             opcodes.push_back(op);
             return *this;
+		}
+
+		void Clear() {
+			opcodes.clear();
+		}
+
+		BasicBlockWriter Clone() const {
+			BasicBlockWriter ret;
+			ret.opcodes = opcodes;
+			return ret;
 		}
 	};
 
@@ -162,7 +176,7 @@ namespace assembly_writer {
 
 	public:
 		FunctionWriter& Write(const BasicBlockWriter& bb) {
-            basic_blocks.push_back(bb);
+            basic_blocks.push_back(bb.Clone());
             return *this;
         }
         
