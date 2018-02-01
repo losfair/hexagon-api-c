@@ -1,6 +1,8 @@
 #ifndef _HX_IMPORTS_H_
 #define _HX_IMPORTS_H_
 
+#define HX_USE_PLATFORM_LIB
+
 #ifdef HX_USE_PLATFORM_LIB
 #include <stdio.h>
 #include <stdlib.h>
