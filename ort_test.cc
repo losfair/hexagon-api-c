@@ -121,7 +121,9 @@ void test_sum() {
 void test_call() {
     int ret_val = 0;
 
-    ort::Function vcaller = build_call_tester_with_callee_as_param();
+    ort::Function vcaller = build_call_tester();
+    vcaller.EnableOptimization();
+
     ort::Function native_cb = ort::Function::LoadNative([&ret_val]() {
         ret_val = 42;
         return ort::Value::Null();
@@ -140,12 +142,9 @@ void test_call() {
 
     ort::Value entry = rt.GetStaticObject("entry");
 
-    std::vector<ort::Value> params;
-    params.push_back(rt.GetStaticObject("set_ret"));
-
     bench("invoke", [&](int n) {
         for(int i = 0; i < n; i++) {
-            rt.Invoke(entry, params);
+            rt.Invoke(entry, std::vector<ort::Value>());
         }
     });
 
