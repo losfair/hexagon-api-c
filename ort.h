@@ -110,6 +110,8 @@ public:
     }
 };
 
+class Runtime;
+
 class Function {
 private:
     HxOrtFunction res;
@@ -129,6 +131,8 @@ public:
     void EnableOptimization() {
         hexagon_ort_function_enable_optimization(res);
     }
+
+    Value Pin(Runtime& rt);
 
     static Function LoadVirtual(
         const char *encoding,
@@ -329,6 +333,23 @@ public:
         }
     }
 };
+
+Value Function::Pin(Runtime& rt) {
+    if(res == nullptr) {
+        throw std::runtime_error("Use of dropped function");
+    }
+
+    HxOrtValue place;
+
+    hexagon_ort_executor_pin_function(
+        &place,
+        rt._impl_handle(),
+        res
+    );
+    res = nullptr;
+
+    return place;
+}
 
 } // namespace ort
 } // namespace hexagon
