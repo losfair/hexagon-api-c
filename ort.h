@@ -6,9 +6,12 @@
 #include <functional>
 #include <vector>
 #include <memory>
+#include <string>
 
 namespace hexagon {
 namespace ort {
+
+class Runtime;
 
 enum class ValueType {
     Unknown,
@@ -77,6 +80,8 @@ public:
         return Value(place);
     }
 
+    static Value FromString(const std::string& s, Runtime& rt);
+
     long long ExtractI64() const {
         long long ret;
         int err = hexagon_ort_value_read_i64(&ret, &res);
@@ -104,13 +109,13 @@ public:
         return (bool) ret;
     }
 
+    std::string ToString(Runtime& rt) const;
+
     bool IsNull() const noexcept {
         int err = hexagon_ort_value_read_null(&res);
         return err == 0;
     }
 };
-
-class Runtime;
 
 class Function {
 private:
@@ -269,6 +274,12 @@ private:
     HxOrtObjectProxy proxy;
 
 public:
+    ObjectProxy(const ObjectProxy& other) = delete;
+    ObjectProxy(ObjectProxy&& other) {
+        proxy = other.proxy;
+        other.proxy = nullptr;
+    }
+
     ObjectProxy(ProxiedObject *proxied) {
         proxy = hexagon_ort_object_proxy_create((void *) &*proxied);
         hexagon_ort_object_proxy_set_destructor(proxy, [](
@@ -349,6 +360,29 @@ Value Function::Pin(Runtime& rt) {
     res = nullptr;
 
     return place;
+}
+
+Value Value::FromString(const std::string& s, Runtime& rt) {
+    HxOrtValue place;
+    hexagon_ort_value_create_from_string(
+        &place,
+        s.c_str(),
+        rt._impl_handle()
+    );
+    return Value(place);
+}
+
+std::string Value::ToString(Runtime& rt) const {
+    char *v = hexagon_ort_value_read_string(
+        &res,
+        rt._impl_handle()
+    );
+    if(!v) {
+        throw std::runtime_error("Cannot convert to string");
+    }
+    std::string ret = v;
+    hexagon_glue_destroy_cstring(v);
+    return ret;
 }
 
 } // namespace ort
