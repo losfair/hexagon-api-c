@@ -118,6 +118,53 @@ void test_sum() {
     printf("%lld\n", val);
 }
 
+class Adder : public ort::ProxiedObject {
+public:
+    virtual ort::Value Call(const std::vector<ort::Value>& args) {
+        return ort::Value::FromInt(args.at(0).ExtractI64() + args.at(1).ExtractI64());
+    }
+};
+
+void test_proxied() {
+    using namespace assembly_writer;
+
+    ort::Runtime rt;
+
+    ort::Function po_feed = ort::Function::LoadNative([&rt]() {
+        ort::ObjectProxy proxy(new Adder());
+        return proxy.Pin(rt);
+    });
+
+    rt.AttachFunction("po_feed", po_feed);
+
+    ort::Function vcaller = FunctionWriter()
+        .Write(
+            BasicBlockWriter()
+                .Write(BytecodeOp("LoadInt", Operand::I64(1)))
+                .Write(BytecodeOp("LoadInt", Operand::I64(2)))
+                .Write(BytecodeOp("LoadNull"))
+                .Write(BytecodeOp("LoadNull"))
+                .Write(BytecodeOp("LoadString", Operand::String("po_feed")))
+                .Write(BytecodeOp("GetStatic"))
+                .Write(BytecodeOp("Call", Operand::I64(0)))
+                .Write(BytecodeOp("Call", Operand::I64(2)))
+                .Write(BytecodeOp("Return"))
+        )
+        .Build();
+
+    rt.AttachFunction("entry", vcaller);
+    ort::Value entry = rt.GetStaticObject("entry");
+
+    int ret = -1;
+
+    bench("proxied", [&](int n) {
+        for(int i = 0; i < n; i++) {
+            ret = rt.Invoke(entry, std::vector<ort::Value>()).ExtractI64();
+        }
+    });
+    printf("%d\n", ret);
+}
+
 void test_call() {
     int ret_val = 0;
 
@@ -154,6 +201,7 @@ void test_call() {
 int main() {
     test_call();
     test_sum();
+    test_proxied();
 
     return 0;
 }
