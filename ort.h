@@ -12,6 +12,7 @@ namespace hexagon {
 namespace ort {
 
 class Runtime;
+class ObjectHandle;
 
 enum class ValueType {
     Unknown,
@@ -116,11 +117,32 @@ public:
     }
 
     std::string ToString(Runtime& rt) const;
+    ObjectHandle ToObjectHandle(Runtime& rt) const;
 
     bool IsNull() const noexcept {
         int err = hexagon_ort_value_read_null(&res);
         return err == 0;
     }
+};
+
+class ObjectHandle {
+private:
+    HxOrtObjectHandle res;
+
+    ObjectHandle() = default;
+public:
+    ObjectHandle(const ObjectHandle& rvalue) = delete;
+    ObjectHandle(ObjectHandle&& rvalue) {
+        res = rvalue.res;
+        rvalue.res = nullptr;
+    }
+    ~ObjectHandle() {
+        if(res != nullptr) {
+            hexagon_ort_object_handle_destroy(res);
+        }
+    }
+
+    friend class Value;
 };
 
 class Function {
@@ -410,6 +432,16 @@ std::string Value::ToString(Runtime& rt) const {
     }
     std::string ret = v;
     hexagon_glue_destroy_cstring(v);
+    return ret;
+}
+
+
+ObjectHandle Value::ToObjectHandle(Runtime& rt) const {
+    ObjectHandle ret;
+    ret.res = hexagon_ort_value_to_object_handle(&res, rt._impl_handle());
+    if(ret.res == nullptr) {
+        throw std::runtime_error("Cannot convert to object handle");
+    }
     return ret;
 }
 

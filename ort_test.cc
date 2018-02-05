@@ -125,6 +125,16 @@ public:
     }
 };
 
+void test_object_handle() {
+    ort::Runtime rt;
+    ort::Value val = ort::Value::FromString("Hello world", rt);
+    bench("object_handle", [&](int n) {
+        for(int i = 0; i < n; i++) {
+            ort::ObjectHandle handle = val.ToObjectHandle(rt);
+        }
+    });
+}
+
 void test_proxied() {
     using namespace assembly_writer;
 
@@ -202,6 +212,7 @@ int main() {
     test_call();
     test_sum();
     test_proxied();
+    test_object_handle();
 
     return 0;
 }
