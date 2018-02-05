@@ -125,6 +125,8 @@ public:
     }
 };
 
+class ProxiedObject;
+
 class ObjectHandle {
 private:
     HxOrtObjectHandle res;
@@ -141,6 +143,8 @@ public:
             hexagon_ort_object_handle_destroy(res);
         }
     }
+
+    ProxiedObject * ToProxiedObject();
 
     friend class Value;
 };
@@ -390,6 +394,7 @@ public:
 
     ~ObjectProxy() {
         if(proxy) {
+            // The proxied object will be destroyed in the destructor callback
             hexagon_ort_object_proxy_destroy(proxy);
         }
     }
@@ -443,6 +448,15 @@ ObjectHandle Value::ToObjectHandle(Runtime& rt) const {
         throw std::runtime_error("Cannot convert to object handle");
     }
     return ret;
+}
+
+ProxiedObject * ObjectHandle::ToProxiedObject() {
+    HxOrtObjectProxy proxy = hexagon_ort_object_handle_to_object_proxy(res);
+    if(proxy == nullptr) {
+        throw std::runtime_error("Not an object proxy");
+    }
+    ProxiedObject *obj = (ProxiedObject *) hexagon_ort_object_proxy_get_data(proxy);
+    return obj;
 }
 
 } // namespace ort

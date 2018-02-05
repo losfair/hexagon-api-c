@@ -123,6 +123,10 @@ public:
     virtual ort::Value Call(const std::vector<ort::Value>& args) {
         return ort::Value::FromInt(args.at(0).ExtractI64() + args.at(1).ExtractI64());
     }
+
+    int local_add(int a, int b) {
+        return a + b;
+    }
 };
 
 void test_object_handle() {
@@ -131,6 +135,22 @@ void test_object_handle() {
     bench("object_handle", [&](int n) {
         for(int i = 0; i < n; i++) {
             ort::ObjectHandle handle = val.ToObjectHandle(rt);
+        }
+    });
+}
+
+void test_proxied_downcast() {
+    ort::Runtime rt;
+    ort::ObjectProxy proxy(new Adder());
+    ort::Value pv = proxy.Pin(rt);
+    ort::ObjectHandle h = pv.ToObjectHandle(rt);
+
+    bench("proxied_downcast", [&](int n) {
+        for(int i = 0; i < n; i++) {
+            Adder *inner = dynamic_cast<Adder *>(h.ToProxiedObject());
+            if(inner -> local_add(1, 2) != 3) {
+                throw std::runtime_error("Bad add result");
+            }
         }
     });
 }
@@ -213,6 +233,7 @@ int main() {
     test_sum();
     test_proxied();
     test_object_handle();
+    test_proxied_downcast();
 
     return 0;
 }
